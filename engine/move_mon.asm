@@ -1382,6 +1382,8 @@ CalcPkmnStats: ; e167
 	ld c, $0
 .loop
 	inc c
+	ld a, 100 ; take this level for stat calcs always
+	ld [CurPartyLevel], a
 	call CalcPkmnStatC
 	ld a, [hMultiplicand + 1]
 	ld [de], a

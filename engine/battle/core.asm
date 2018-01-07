@@ -2237,21 +2237,40 @@ UpdateBattleStateAndExperienceAfterEnemyFaint: ; 3ce01
 	jr .crystalAmountDetermined
 .noOverflow
 	ld b, 0
-.crystalAmountDetermined		
+.crystalAmountDetermined
+	; store the gained crystals in the text buffer for display
+	ld a, b
+	ld [StringBuffer2], a
+	ld a, c
+	ld [StringBuffer2 + 1], a	
 	ld hl, wCrystalCount
-	ld a, [hli]
+	ld a, [hli]	
 	ld d, a
-	ld a, [hl]
+	ld a, [hl]	
 	ld e, a
 	push de
 	pop hl	
 	add hl, bc	
 	push hl
 	pop bc
+	jr nc, .newCrystalAmountDetermined
+	ld b, 255
+	ld c, 255
+.newCrystalAmountDetermined		
 	ld a, b
-	ld [wCrystalCount], a
+	ld [wCrystalCount], a	
 	ld a, c
-	ld [wCrystalCount+1], a
+	ld [wCrystalCount+1], a	
+	ld hl, TextJump_GainedCrystals
+	ld a, [StringBuffer2]
+	and a 
+	jr nz, .showCrystalsGained
+	ld a, [StringBuffer2+1]
+	cp 1
+	jr nz, .showCrystalsGained	
+	ld hl, TextJump_GainedCrystal
+.showCrystalsGained	
+	call BattleTextBox
 	ret	
 
 StopDangerSound: ; 3ceec
@@ -7237,441 +7256,13 @@ FinishBattleAnim: ; 3ee27
 	ret
 ; 3ee3b
 
-GiveExperiencePoints: ; 3ee3b
-; Give experience.
-; Don't give experience if linked or in the Battle Tower.
-	ld a, [wLinkMode]
-	and a
-	ret nz
-
-	ld a, [InBattleTowerBattle]
-	bit 0, a
-	ret nz
-
-	call .EvenlyDivideExpAmongParticipants
-	xor a
-	ld [CurPartyMon], a
-	ld bc, PartyMon1Species
-
-.loop
-	ld hl, MON_HP
-	add hl, bc
-	ld a, [hli]
-	or [hl]
-	jp z, .skip_stats ; fainted
-
-	push bc
-	ld hl, wBattleParticipantsNotFainted
-	ld a, [CurPartyMon]
-	ld c, a
-	ld b, CHECK_FLAG
-	ld d, $0
-	predef FlagPredef
-	ld a, c
-	and a
-	pop bc
-	jp z, .skip_stats
-
-; give stat exp
-	ld hl, MON_STAT_EXP + 1
-	add hl, bc
-	ld d, h
-	ld e, l
-	ld hl, EnemyMonBaseStats - 1
-	push bc
-	ld c, $5
-.loop1
-	inc hl
-	ld a, [de]
-	add [hl]
-	ld [de], a
-	jr nc, .okay1
-	dec de
-	ld a, [de]
-	inc a
-	jr z, .next
-	ld [de], a
-	inc de
-
-.okay1
-	push hl
-	push bc
-	ld a, MON_PKRUS
-	call GetPartyParamLocation
-	ld a, [hl]
-	and a
-	pop bc
-	pop hl
-	jr z, .skip
-	ld a, [de]
-	add [hl]
-	ld [de], a
-	jr nc, .skip
-	dec de
-	ld a, [de]
-	inc a
-	jr z, .next
-	ld [de], a
-	inc de
-	jr .skip
-
-.next
-	ld a, $ff
-	ld [de], a
-	inc de
-	ld [de], a
-
-.skip
-	inc de
-	inc de
-	dec c
-	jr nz, .loop1
-	xor a
-	ld [hMultiplicand + 0], a
-	ld [hMultiplicand + 1], a
-	ld a, [EnemyMonBaseExp]
-	ld [hMultiplicand + 2], a
-	ld a, [EnemyMonLevel]
-	ld [hMultiplier], a
-	call Multiply
-	ld a, 7
-	ld [hDivisor], a
-	ld b, 4
-	call Divide
-; Boost Experience for traded Pokemon
-	pop bc
-	ld hl, MON_ID
-	add hl, bc
-	ld a, [PlayerID]
-	cp [hl]
-	jr nz, .boosted
-	inc hl
-	ld a, [PlayerID + 1]
-	cp [hl]
-	ld a, $0
-	jr z, .no_boost
-
-.boosted
-	call BoostExp
-	ld a, $1
-
-.no_boost
-; Boost experience for a Trainer Battle
-	ld [StringBuffer2 + 2], a
-	ld a, [wBattleMode]
-	dec a
-	call nz, BoostExp
-; Boost experience for Lucky Egg
-	push bc
-	ld a, MON_ITEM
-	call GetPartyParamLocation
-	ld a, [hl]
-	cp LUCKY_EGG
-	call z, BoostExp
-	ld a, [hQuotient + 2]
-	ld [StringBuffer2 + 1], a
-	ld a, [hQuotient + 1]
-	ld [StringBuffer2], a
-	ld a, [CurPartyMon]
-	ld hl, PartyMonNicknames
-	call GetNick
-	ld hl, Text_PkmnGainedExpPoint
-	call BattleTextBox
-	ld a, [StringBuffer2 + 1]
-	ld [hQuotient + 2], a
-	ld a, [StringBuffer2]
-	ld [hQuotient + 1], a
-	pop bc
-	call AnimateExpBar
-	push bc
-	call LoadTileMapToTempTileMap
-	pop bc
-	ld hl, MON_STAT_EXP - 1
-	add hl, bc
-	ld d, [hl]
-	ld a, [hQuotient + 2]
-	add d
-	ld [hld], a
-	ld d, [hl]
-	ld a, [hQuotient + 1]
-	adc d
-	ld [hl], a
-	jr nc, .skip2
-	dec hl
-	inc [hl]
-	jr nz, .skip2
-	ld a, $ff
-	ld [hli], a
-	ld [hli], a
-	ld [hl], a
-
-.skip2
-	ld a, [CurPartyMon]
-	ld e, a
-	ld d, $0
-	ld hl, PartySpecies
-	add hl, de
-	ld a, [hl]
-	ld [CurSpecies], a
-	call GetBaseData
-	push bc
-	ld d, MAX_LEVEL
-	callfar CalcExpAtLevel
-	pop bc
-	ld hl, MON_STAT_EXP - 1
-	add hl, bc
-	push bc
-	ld a, [hQuotient]
-	ld b, a
-	ld a, [hQuotient + 1]
-	ld c, a
-	ld a, [hQuotient + 2]
-	ld d, a
-	ld a, [hld]
-	sub d
-	ld a, [hld]
-	sbc c
-	ld a, [hl]
-	sbc b
-	jr c, .not_max_exp
-	ld a, b
-	ld [hli], a
-	ld a, c
-	ld [hli], a
-	ld a, d
-	ld [hld], a
-
-.not_max_exp
-	xor a ; PARTYMON
-	ld [MonType], a
-	predef CopyPkmnToTempMon
-	callfar CalcLevel
-	pop bc
-	ld hl, MON_LEVEL
-	add hl, bc
-	ld a, [hl]
-	cp MAX_LEVEL
-	jp nc, .skip_stats
-	cp d
-	jp z, .skip_stats
-; <NICKNAME> grew to level ##!
-	ld [wTempLevel], a
-	ld a, [CurPartyLevel]
-	push af
-	ld a, d
-	ld [CurPartyLevel], a
-	ld [hl], a
-	ld hl, MON_SPECIES
-	add hl, bc
-	ld a, [hl]
-	ld [CurSpecies], a
-	ld [wd265], a
-	call GetBaseData
-	ld hl, MON_MAXHP + 1
-	add hl, bc
-	ld a, [hld]
-	ld e, a
-	ld d, [hl]
-	push de
-	ld hl, MON_MAXHP
-	add hl, bc
-	ld d, h
-	ld e, l
-	ld hl, MON_STAT_EXP - 1
-	add hl, bc
-	push bc
-	ld b, TRUE
-	predef CalcPkmnStats
-	pop bc
-	pop de
-	ld hl, MON_MAXHP + 1
-	add hl, bc
-	ld a, [hld]
-	sub e
-	ld e, a
-	ld a, [hl]
-	sbc d
-	ld d, a
-	dec hl
-	ld a, [hl]
-	add e
-	ld [hld], a
-	ld a, [hl]
-	adc d
-	ld [hl], a
-	ld a, [CurBattleMon]
-	ld d, a
-	ld a, [CurPartyMon]
-	cp d
-	jr nz, .skip_animation
-	ld de, BattleMonHP
-	ld a, [hli]
-	ld [de], a
-	inc de
-	ld a, [hli]
-	ld [de], a
-	ld de, BattleMonMaxHP
-	push bc
-	ld bc, PARTYMON_STRUCT_LENGTH - MON_MAXHP
-	call CopyBytes
-	pop bc
-	ld hl, MON_LEVEL
-	add hl, bc
-	ld a, [hl]
-	ld [BattleMonLevel], a
-	ld a, [PlayerSubStatus5]
-	bit SUBSTATUS_TRANSFORMED, a
-	jr nz, .transformed
-	ld hl, MON_ATK
-	add hl, bc
-	ld de, PlayerStats
-	ld bc, PARTYMON_STRUCT_LENGTH - MON_ATK
-	call CopyBytes
-
-.transformed
-	xor a
-	ld [wd265], a
-	call ApplyStatLevelMultiplierOnAllStats
-	callfar ApplyStatusEffectOnPlayerStats
-	callfar BadgeStatBoosts
-	callfar UpdatePlayerHUD
-	call EmptyBattleTextBox
-	call LoadTileMapToTempTileMap
-	ld a, $1
-	ld [hBGMapMode], a
-
-.skip_animation
-	farcall LevelUpHappinessMod
-	ld a, [CurBattleMon]
-	ld b, a
-	ld a, [CurPartyMon]
-	cp b
-	jr z, .skip_animation2
-	ld de, SFX_HIT_END_OF_EXP_BAR
-	call PlaySFX
-	call WaitSFX
-	ld hl, BattleText_StringBuffer1GrewToLevel
-	call StdBattleTextBox
-	call LoadTileMapToTempTileMap
-
-.skip_animation2
-	xor a ; PARTYMON
-	ld [MonType], a
-	predef CopyPkmnToTempMon
-	hlcoord 9, 0
-	ld b, $a
-	ld c, $9
-	call TextBox
-	hlcoord 11, 1
-	ld bc, 4
-	predef PrintTempMonStats
-	ld c, $1e
-	call DelayFrames
-	call WaitPressAorB_BlinkCursor
-	call Call_LoadTempTileMapToTileMap
-	xor a ; PARTYMON
-	ld [MonType], a
-	ld a, [CurSpecies]
-	ld [wd265], a
-	ld a, [CurPartyLevel]
-	push af
-	ld c, a
-	ld a, [wTempLevel]
-	ld b, a
-
-.level_loop
-	inc b
-	ld a, b
-	ld [CurPartyLevel], a
-	push bc
-	predef LearnLevelMoves
-	pop bc
-	ld a, b
-	cp c
-	jr nz, .level_loop
-	pop af
-	ld [CurPartyLevel], a
-	ld hl, EvolvableFlags
-	ld a, [CurPartyMon]
-	ld c, a
-	ld b, SET_FLAG
-	predef FlagPredef
-	pop af
-	ld [CurPartyLevel], a
-
-.skip_stats
-	ld a, [PartyCount]
-	ld b, a
-	ld a, [CurPartyMon]
-	inc a
-	cp b
-	jr z, .done
-	ld [CurPartyMon], a
-	ld a, MON_SPECIES
-	call GetPartyParamLocation
-	ld b, h
-	ld c, l
-	jp .loop
-
-.done
-	jp ResetBattleParticipants
-; 3f0d4
-
-.EvenlyDivideExpAmongParticipants:
-; count number of battle participants
-	ld a, [wBattleParticipantsNotFainted]
-	ld b, a
-	ld c, PARTY_LENGTH
-	ld d, 0
-.count_loop
-	xor a
-	srl b
-	adc d
-	ld d, a
-	dec c
-	jr nz, .count_loop
-	cp 2
-	ret c
-
-	ld [wd265], a
-	ld hl, EnemyMonBaseStats
-	ld c, EnemyMonEnd - EnemyMonBaseStats
-.count_loop2
-	xor a
-	ld [hDividend + 0], a
-	ld a, [hl]
-	ld [hDividend + 1], a
-	ld a, [wd265]
-	ld [hDivisor], a
-	ld b, 2
-	call Divide
-	ld a, [hQuotient + 2]
-	ld [hli], a
-	dec c
-	jr nz, .count_loop2
-	ret
-; 3f106
-
-BoostExp: ; 3f106
-; Multiply experience by 1.5x
-	push bc
-; load experience value
-	ld a, [hProduct + 2]
-	ld b, a
-	ld a, [hProduct + 3]
-	ld c, a
-; halve it
-	srl b
-	rr c
-; add it back to the whole exp value
-	add c
-	ld [hProduct + 3], a
-	ld a, [hProduct + 2]
-	adc b
-	ld [hProduct + 2], a
-	pop bc
-	ret
-; 3f11b
+TextJump_GainedCrystals:
+	text_jump Text_GainedCrystals
+	db "@"
+	
+TextJump_GainedCrystal:
+	text_jump Text_GainedCrystal
+	db "@"	
 
 Text_PkmnGainedExpPoint: ; 3f11b
 	text_jump Text_Gained

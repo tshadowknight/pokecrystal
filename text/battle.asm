@@ -1291,3 +1291,22 @@ BattleText_0x8188e: ; 0x8188e
 	line "left today!"
 	done
 ; 0x818ac
+
+Text_GainedCrystals::
+	text "You received"
+	line "@"
+	deciram StringBuffer2, 2, 4
+	text " CRYSTALS!"
+	prompt
+	
+Text_GainedCrystal::
+	text "You received"
+	line "@"
+	deciram StringBuffer2, 2, 4
+	text " CRYSTAL!"
+	prompt	
+	
+Text_NoCrystals::
+	text "But no CRYSTALS"
+	line "appeared..."
+	prompt	

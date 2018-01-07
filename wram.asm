@@ -2513,7 +2513,7 @@ wMobileBattleRoomSceneID::                        db ; d9c0
 
 ; fight counts
 wJackFightCount::    db ; d9f2
-wBeverlyFightCount:: db ; unused
+
 wHueyFightCount::    db
 wGavenFightCount::   db
 wBethFightCount::    db
@@ -2526,7 +2526,7 @@ wLizFightCount::     db
 wAnthonyFightCount:: db
 wToddFightCount::    db
 wGinaFightCount::    db
-wIrwinFightCount::   db ; unused
+
 wArnieFightCount::   db
 wAlanFightCount::    db
 wDanaFightCount::    db
@@ -2541,6 +2541,10 @@ wKenjiFightCount::   db ; unused
 wParryFightCount::   db
 wErinFightCount::    db
 ; da0e
+
+; wBeverlyFightCount:: db ; unused
+; wIrwinFightCount::   db ; unused
+wCrystalCount:: dw
 
 	ds 100
 

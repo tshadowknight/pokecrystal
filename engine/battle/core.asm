@@ -2206,98 +2206,53 @@ UpdateBattleStateAndExperienceAfterEnemyFaint: ; 3ce01
 	ld a, [wBattleResult]
 	and $c0
 	ld [wBattleResult], a
-	call IsAnyMonHoldingExpShare
-	jr z, .skip_exp
-	ld hl, EnemyMonBaseStats
-	ld b, EnemyMonEnd - EnemyMonBaseStats
-.loop
-	srl [hl]
-	inc hl
-	dec b
-	jr nz, .loop
-
-.skip_exp
-	ld hl, EnemyMonBaseStats
-	ld de, wBackupEnemyMonBaseStats
-	ld bc, EnemyMonEnd - EnemyMonBaseStats
-	call CopyBytes
-	xor a
-	ld [wGivingExperienceToExpShareHolders], a
-	call GiveExperiencePoints
-	call IsAnyMonHoldingExpShare
-	ret z
-
-	ld a, [wBattleParticipantsNotFainted]
-	push af
-	ld a, d
-	ld [wBattleParticipantsNotFainted], a
-	ld hl, wBackupEnemyMonBaseStats
-	ld de, EnemyMonBaseStats
-	ld bc, EnemyMonEnd - EnemyMonBaseStats
-	call CopyBytes
-	ld a, $1
-	ld [wGivingExperienceToExpShareHolders], a
-	call GiveExperiencePoints
-	pop af
-	ld [wBattleParticipantsNotFainted], a
-	ret
-; 3ceaa
-
-IsAnyMonHoldingExpShare: ; 3ceaa
-	ld a, [PartyCount]
-	ld b, a
-	ld hl, PartyMon1
-	ld c, 1
-	ld d, 0
-.loop
-	push hl
-	push bc
-	ld bc, MON_HP
-	add hl, bc
-	ld a, [hli]
-	or [hl]
-	pop bc
-	pop hl
-	jr z, .next
-
-	push hl
-	push bc
-	ld bc, MON_ITEM
-	add hl, bc
-	pop bc
+	ld a, [EnemyMonSpecies]
+	ld c, a 
+	ld b, 0
+	ld hl, BaseCrystalYields
+	add hl, bc 
 	ld a, [hl]
-	pop hl
-
-	cp EXP_SHARE
-	jr nz, .next
-	ld a, d
-	or c
+	ld c, a
+	ld a, [wJohtoBadges]
 	ld d, a
-
-.next
-	sla c
-	push de
-	ld de, PARTYMON_STRUCT_LENGTH
-	add hl, de
-	pop de
-	dec b
-	jr nz, .loop
-
-	ld a, d
 	ld e, 0
-	ld b, PARTY_LENGTH
-.loop2
-	srl a
-	jr nc, .okay
-	inc e
-
-.okay
-	dec b
-	jr nz, .loop2
-	ld a, e
+.applyBadgeScaling
+	bit 0, d
+	jr z, .notObtained
+	sla c
+	jr nc, .notObtained
+	ld c, 1
+	ld e, 1
+.notObtained	
+	srl d
+	ld a, d 
 	and a
-	ret
-; 3ceec
+	jr nz, .applyBadgeScaling
+	ld a, e 
+	and a 
+	jr z, .noOverflow
+	ld a, c 
+	ld b, a 
+	ld c, 0
+	jr .crystalAmountDetermined
+.noOverflow
+	ld b, 0
+.crystalAmountDetermined		
+	ld hl, wCrystalCount
+	ld a, [hli]
+	ld d, a
+	ld a, [hl]
+	ld e, a
+	push de
+	pop hl	
+	add hl, bc	
+	push hl
+	pop bc
+	ld a, b
+	ld [wCrystalCount], a
+	ld a, c
+	ld [wCrystalCount+1], a
+	ret	
 
 StopDangerSound: ; 3ceec
 	xor a
@@ -2625,9 +2580,6 @@ PlayVictoryMusic: ; 3d0ea
 	ld a, [wBattleMode]
 	dec a
 	jr nz, .trainer_victory
-	push de
-	call IsAnyMonHoldingExpShare
-	pop de
 	jr nz, .play_music
 	ld hl, wPayDayMoney
 	ld a, [hli]
@@ -9518,3 +9470,261 @@ BattleStartMessage: ; 3fc8b
 
 	ret
 ; 3fd26
+
+BaseCrystalYields:
+	db 0
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 3
+	db 1
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 2
+	db 2
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 10
+	db 2
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 2
+	db 2
+	db 2
+	db 2
+	db 2
+	db 2
+	db 2
+	db 0
+	db 2
+	db 2
+	db 2
+	db 1
+	db 2
+	db 2
+	db 2
+	db 1
+	db 1
+	db 2
+	db 1
+	db 2
+	db 2
+	db 2
+	db 4
+	db 4
+	db 4
+	db 1
+	db 2
+	db 3
+	db 5
+	db 5
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 1
+	db 1
+	db 1
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 3
+	db 3
+	db 1
+	db 2
+	db 2
+	db 3
+	db 1
+	db 2
+	db 3
+	db 2
+	db 1
+	db 2
+	db 2
+	db 1
+	db 2
+	db 2
+	db 2
+	db 2
+	db 2
+	db 2
+	db 3
+	db 2
+	db 2
+	db 1
+	db 2
+	db 2
+	db 2
+	db 2
+	db 1
+	db 2
+	db 2
+	db 2
+	db 2
+	db 2
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 1
+	db 2
+	db 2
+	db 1
+	db 2
+	db 2
+	db 2
+	db 2
+	db 1
+	db 2
+	db 3
+	db 1
+	db 2
+	db 2
+	db 2
+	db 2
+	db 1
+	db 2
+	db 1
+	db 1
+	db 1
+	db 2
+	db 15
+	db 4
+	db 4
+	db 4
+	db 1
+	db 2
+	db 3
+	db 5
+	db 5
+	db 5
+	db 0
+	db 0
+	db 0
+	db 0

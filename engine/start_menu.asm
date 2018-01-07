@@ -16,6 +16,7 @@ StartMenu:: ; 125cd
 
 	call LoadMenuDataHeader
 	call .SetUpMenuItems
+
 	ld a, [wBattleMenuCursorBuffer]
 	ld [wMenuCursorBuffer], a
 	call .DrawMenuAccount_
@@ -24,7 +25,8 @@ StartMenu:: ; 125cd
 	call SafeUpdateSprites
 	call _OpenAndCloseMenu_HDMATransferTileMapAndAttrMap
 	farcall LoadFonts_NoOAMUpdate
-	call .DrawBugContestStatus
+	call .DrawBugContestStatus	
+	call DrawCrystalCountBox
 	call UpdateTimePals
 	jr .Select
 
@@ -1972,3 +1974,30 @@ Function132fe: ; 132fe
 	ld [hl], "▶"
 	ret
 ; 13327
+
+DrawCrystalCountBox: ; 128d1
+	hlcoord 0, 0
+	lb bc, 2, 10
+	call ClearBox
+	hlcoord 0, 0
+	ld b, 0
+	ld c, 10
+	call TextBoxPalette
+	hlcoord 0, 0
+	ld de, Text_Crystals
+	call PlaceString
+	;hlcoord 0, 1
+	;ld de, StringBuffer1
+	;call PlaceString	
+	ld b, 2
+	set 6, b
+	ld c, 5
+	hlcoord 0, 1
+	ld de, wCrystalCount
+	call PrintNum
+	ret
+; 128de
+
+Text_Crystals:
+	db "CRYSTALS"
+	db "@"

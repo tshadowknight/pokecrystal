@@ -96,7 +96,7 @@ TrainerType1: ; 397eb
 	ld a, [hli]
 	cp $ff
 	ret z
-
+	ld a, 100
 	ld [CurPartyLevel], a
 	ld a, [hli]
 	ld [CurPartySpecies], a
@@ -116,7 +116,7 @@ TrainerType2: ; 39806
 	ld a, [hli]
 	cp $ff
 	ret z
-
+	ld a, 100
 	ld [CurPartyLevel], a
 	ld a, [hli]
 	ld [CurPartySpecies], a
@@ -193,7 +193,7 @@ TrainerType3: ; 39871
 	ld a, [hli]
 	cp $ff
 	ret z
-
+	ld a, 100
 	ld [CurPartyLevel], a
 	ld a, [hli]
 	ld [CurPartySpecies], a
@@ -222,7 +222,7 @@ TrainerType4: ; 3989d
 	ld a, [hli]
 	cp $ff
 	ret z
-
+	ld a, 100
 	ld [CurPartyLevel], a
 	ld a, [hli]
 	ld [CurPartySpecies], a

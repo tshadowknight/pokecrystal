@@ -261,3 +261,4 @@ FindApricornsInBag: ; 24c64
 	db BLK_APRICORN, HEAVY_BALL
 	db PNK_APRICORN, LOVE_BALL
 	db -1
+

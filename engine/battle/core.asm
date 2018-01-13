@@ -2228,6 +2228,7 @@ UpdateBattleStateAndExperienceAfterEnemyFaint: ; 3ce01
 	ld a, d 
 	and a
 	jr nz, .applyBadgeScaling
+	
 	ld a, e 
 	and a 
 	jr z, .noOverflow

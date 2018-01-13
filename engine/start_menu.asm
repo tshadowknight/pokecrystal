@@ -1986,9 +1986,6 @@ DrawCrystalCountBox: ; 128d1
 	hlcoord 0, 0
 	ld de, Text_Crystals
 	call PlaceString
-	;hlcoord 0, 1
-	;ld de, StringBuffer1
-	;call PlaceString	
 	ld b, 2
 	set 6, b
 	ld c, 5

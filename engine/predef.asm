@@ -104,5 +104,6 @@ PredefPointers:: ; 856b
 	add_predef AnimateFrontpic
 	add_predef Predef48 ; $48
 	add_predef HOF_AnimateFrontpic
+	add_predef PrintTempMonStatsAndStatExp
 	dbw $ff, InexplicablyEmptyFunction ; ???
 ; 864c

@@ -112,14 +112,91 @@ PrintTempMonStats: ; 50b7b
 	ld de, SCREEN_WIDTH * 2
 	add hl, de
 	ret
-
+	
 .StatNames: ; 50bb5
 	db   "ATTACK"
 	next "DEFENSE"
 	next "SPCL.ATK"
 	next "SPCL.DEF"
 	next "SPEED"
-	next "@"
+	next "@"	
+	
+PrintTempMonStatsAndStatExp: ; 50b7b
+; Print TempMon's stats at hl, with spacing bc.
+	push bc
+	push hl
+	ld de, .HP
+	call .PrintStatName
+	ld de, .ATK
+	call .PrintStatName
+	ld de, .DEF
+	call .PrintStatName
+	ld de, .SATK
+	call .PrintStatName
+	ld de, .SDEF
+	call .PrintStatName
+	ld de, .SPD
+	call .PrintStatName
+	pop hl
+	pop bc	
+	add hl, bc
+	push hl	
+	lb bc, 2, 3
+	ld de, TempMonHP
+	call .PrintStat
+	ld de, TempMonAttack
+	call .PrintStat
+	ld de, TempMonDefense
+	call .PrintStat
+	ld de, TempMonSpclAtk
+	call .PrintStat
+	ld de, TempMonSpclDef
+	call .PrintStat
+	ld de, TempMonSpeed
+	call .PrintStat
+	pop hl
+	lb bc, 0, 4
+	add hl, bc
+	lb bc, 2, 5
+	ld de, TempMonHPExp
+	call .PrintStat
+	ld de, TempMonAtkExp
+	call .PrintStat
+	ld de, TempMonDefExp
+	call .PrintStat
+	ld de, TempMonSpcExp
+	call .PrintStat
+	ld de, TempMonSpcExp
+	call .PrintStat
+	ld de, TempMonSpdExp
+	call .PrintStat
+	ret
+.PrintStat: ; 50bab
+	push hl
+	call PrintNum
+	pop hl
+	ld de, SCREEN_WIDTH
+	add hl, de
+	ret		
+.PrintStatName:
+	call PlaceString
+	ld de, SCREEN_WIDTH
+	add hl, de
+	ret
+	
+.HP: ; 50bb5
+	db "HP@"
+.ATK:	
+	db "ATK@"
+.DEF:	
+	db "DEF@"
+.SATK:	
+	db "SATK@"
+.SDEF:	
+	db "SDEF@"
+.SPD:	
+	db "SPD@"
+	
 
 GetGender: ; 50bdd
 ; Return the gender of a given monster (CurPartyMon/CurOTMon/CurWildMon).

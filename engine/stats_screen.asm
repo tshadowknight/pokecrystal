@@ -22,6 +22,7 @@ StatsScreenInit_gotaddress: ; 4dc94
 	xor a
 	ld [hMapAnims], a ; disable overworld tile animations
 	ld a, [wBoxAlignment] ; whether sprite is to be mirrorred
+	ld [wcf65], a ; reset stats screen input mode
 	push af
 	ld a, [wJumptableIndex]
 	ld b, a
@@ -276,24 +277,62 @@ StatsScreen_GetJoypad: ; 4de2c (13:5e2c)
 
 StatsScreen_JoypadAction: ; 4de54 (13:5e54)
 	push af
-	ld a, [wcf64]
+	ld a, [wcf64] ; current stat page
 	and $3
 	ld c, a
 	pop af
+	
 	bit B_BUTTON_F, a
-	jp nz, .b_button
+	ld b, 0
+	jp nz, .actionFound ; b_button
 	bit D_LEFT_F, a
-	jr nz, .d_left
+	ld b, 1
+	jr nz, .actionFound ; d_left
 	bit D_RIGHT_F, a
-	jr nz, .d_right
+	ld b, 2
+	jr nz, .actionFound ; d_right
 	bit A_BUTTON_F, a
-	jr nz, .a_button
+	ld b, 3
+	jr nz, .actionFound ; a_button
 	bit D_UP_F, a
-	jr nz, .d_up
+	ld b, 4
+	jr nz, .actionFound ; d_up
 	bit D_DOWN_F, a
-	jr nz, .d_down
-	jr .done
-
+	ld b, 5
+	jr nz, .actionFound ; d_down
+	ld b, 6 ; done
+.actionFound:	
+	ld a, [wcf65]
+	and a
+	ld hl, .defaultStatsActions
+	jr z, .actionTableDetermined
+	cp 1
+	ld hl, .manageStatExpActions
+	jr z, .actionTableDetermined
+.actionTableDetermined:	
+	ld a, b	
+	and $7f
+	rst JumpTable
+	ret	
+	
+.defaultStatsActions:
+	dw .b_button
+	dw .d_left
+	dw .d_right
+	dw .a_button
+	dw .d_up
+	dw .d_down
+	dw .done	
+	
+.manageStatExpActions:
+	dw .b_button_statexp
+	dw .d_left_statexp
+	dw .d_right_statexp
+	dw .a_button_statexp
+	dw .d_up_statexp
+	dw .d_down_statexp
+	dw .done	
+	
 .d_down
 	ld a, [MonType]
 	cp BOXMON
@@ -336,7 +375,7 @@ StatsScreen_JoypadAction: ; 4de54 (13:5e54)
 .a_button
 	ld a, c
 	cp $3
-	jr z, .b_button
+	jr z, .setStatExpOverviewMode
 .d_right
 	inc c
 	ld a, $3
@@ -353,6 +392,14 @@ StatsScreen_JoypadAction: ; 4de54 (13:5e54)
 
 .done
 	ret
+	
+.setStatExpOverviewMode
+	xor a 
+	ld [Buffer1], a
+	call .drawStatExpCursor
+	ld a, 1
+	ld [wcf65], a 
+	ret	
 
 .set_page
 	ld a, [wcf64]
@@ -372,7 +419,126 @@ StatsScreen_JoypadAction: ; 4de54 (13:5e54)
 	ld h, 7
 	call StatsScreen_SetJumptableIndex
 	ret
+	
+; manage stat exp screen 	
+.b_button_statexp
+	call .clearStatExpCursor
+	xor a 
+	ld [wcf65], a 
+	ret
 
+.d_left_statexp
+	ret
+.d_right_statexp
+	ret
+	
+.a_button_statexp
+	ld a, [CurPartyMon]
+	ld hl, PartyMon1
+	lb bc, 0, PARTYMON_STRUCT_LENGTH	
+.partyMonLoop
+	and a 
+	jr z, .partyMonFound
+	dec a
+	add hl, bc
+	jr .partyMonLoop
+.partyMonFound	
+	push hl 
+	ld a, [Buffer1]
+	ld b, 0
+	ld c, a 
+	ld hl, .statExpOffsets
+	add hl, bc
+	ld a, [hl]
+	pop hl
+	ld c, a
+	add hl, bc
+	push hl
+	ld a, [hli]
+	ld b, a 
+	ld a, [hl]
+	ld c, a	
+	push bc 
+	pop hl 
+	ld b, $C 
+	ld c, $CC
+	add hl, bc	
+	push hl 
+	pop bc
+	jr nc, .noOverflow
+	lb bc, $FF, $FF
+.noOverflow	
+	pop hl 
+	ld a, b 
+	ld [hli], a
+	ld a, c
+	ld [hl], a
+	call StatsScreen_CopyToTempMon
+	ret
+	
+.statExpOffsets
+	db MON_HP_EXP
+	db MON_ATK_EXP
+	db MON_DEF_EXP
+	db MON_SPD_EXP
+	db MON_SPC_EXP
+	db MON_SPC_EXP
+	
+.d_up_statexp
+	ld a, [Buffer1]
+	sub a, 1
+	jr nc, .cursorDecremented
+	ld a, 5
+.cursorDecremented
+	ld [Buffer1], a 	
+	call .drawStatExpCursor
+	ret
+.d_down_statexp	
+	ld a, [Buffer1]
+	inc a
+	cp 6
+	jr c, .cursorIncremented
+	ld a, 0
+.cursorIncremented
+	ld [Buffer1], a 
+	call .drawStatExpCursor
+	ret
+	
+.drawStatExpCursor
+	call .clearStatExpCursor
+	ld a, [Buffer1]
+	inc a
+	hlcoord 0, 10
+	ld de, SCREEN_WIDTH
+.positionLoop	
+	dec a
+	and a 
+	jr z, .positionFound
+	add hl, de	
+	jr .positionLoop
+.positionFound	
+	ld a, $ed
+	ld [hl], a
+	farcall HDMATransferTileMapToWRAMBank3	
+	ret	
+	
+.clearStatExpCursor
+	ld a, ""
+	hlcoord 0, 10
+	ld [hl], a	
+	hlcoord 0, 11
+	ld [hl], a
+	hlcoord 0, 12
+	ld [hl], a
+	hlcoord 0, 13
+	ld [hl], a
+	hlcoord 0, 14
+	ld [hl], a
+	hlcoord 0, 15
+	ld [hl], a
+	farcall HDMATransferTileMapToWRAMBank3
+	ret
+	
 StatsScreen_InitUpperHalf: ; 4deea (13:5eea)
 	call .PlaceHPBar
 	xor a
@@ -742,24 +908,24 @@ StatsScreen_LoadGFX: ; 4dfb6 (13:5fb6)
 	ld de, SCREEN_WIDTH
 	ld b, 10
 	ld a, "|"
-.BluePageVerticalDivider:
-	ld [hl], a
-	add hl, de
-	dec b
-	jr nz, .BluePageVerticalDivider
-	hlcoord 11, 8
-	ld bc, 6
-	predef PrintTempMonStats
+;.BluePageVerticalDivider:
+	; ld [hl], a
+;	add hl, de
+;	dec b
+;	jr nz, .BluePageVerticalDivider
+	hlcoord 1, 10
+	ld bc, 5
+	predef PrintTempMonStatsAndStatExp
 	ret
 
 .PlaceOTInfo: ; 4e1cc (13:61cc)
 	ld de, IDNoString
-	hlcoord 0, 9
+	hlcoord 0, 8
 	call PlaceString
-	ld de, OTString
-	hlcoord 0, 12
-	call PlaceString
-	hlcoord 2, 10
+	;ld de, OTString
+	;hlcoord 9, 8
+	;call PlaceString
+	hlcoord 3, 8
 	lb bc, PRINTNUM_LEADINGZEROS | 2, 5
 	ld de, TempMonID
 	call PrintNum
@@ -767,7 +933,7 @@ StatsScreen_LoadGFX: ; 4dfb6 (13:5fb6)
 	call GetNicknamePointer
 	call CopyNickname
 	farcall CheckNickErrors
-	hlcoord 2, 13
+	hlcoord 9, 8
 	call PlaceString
 	ld a, [TempMonCaughtGender]
 	and a
@@ -779,7 +945,7 @@ StatsScreen_LoadGFX: ; 4dfb6 (13:5fb6)
 	jr z, .got_gender
 	ld a, "♀"
 .got_gender
-	hlcoord 9, 13
+	hlcoord 19, 8
 	ld [hl], a
 .done
 	ret

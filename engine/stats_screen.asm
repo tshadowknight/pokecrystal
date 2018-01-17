@@ -443,6 +443,7 @@ StatsScreen_JoypadAction: ; 4de54 (13:5e54)
 	add hl, bc
 	jr .partyMonLoop
 .partyMonFound	
+	push hl ; target party mon base pointer
 	push hl 
 	ld a, [Buffer1]
 	ld b, 0
@@ -453,36 +454,89 @@ StatsScreen_JoypadAction: ; 4de54 (13:5e54)
 	pop hl
 	ld c, a
 	add hl, bc
-	push hl
-	ld a, [hli]
-	ld b, a 
+	inc hl 
 	ld a, [hl]
-	ld c, a	
-	push bc 
-	pop hl 
-	ld b, $C 
-	ld c, $CC
-	add hl, bc	
+	cp 20 
+	jr z, .exitMaxed
+	
+	push af
+	push hl
+	ld hl, .statTierCosts
+	ld b, 0 
+	ld c, 0
+.findTierCostIdx
+	and a
+	jr z, .tierCostIdxFound 
+	inc c 
+	inc c
+	dec a 
+	jr .findTierCostIdx		
+.tierCostIdxFound	
+	add hl, bc
+	ld a, [hli]
+	ld c, a 
+	ld a, [hl]
+	ld b, a
+	call SubtractCrystals
+	jr c, .exitNotEnoughCrystals	
+	pop hl
+	pop af
+	inc a 
+	ld [hl], a	
+	pop hl ; target party mon base pointer
 	push hl 
-	pop bc
-	jr nc, .noOverflow
-	lb bc, $FF, $FF
-.noOverflow	
-	pop hl 
-	ld a, b 
-	ld [hli], a
-	ld a, c
-	ld [hl], a
+	lb bc, 0, MON_MAXHP
+	add hl, bc 
+	ld d, h
+	ld e, l
+	pop hl ; target party mon base pointer
+	lb bc, 0, MON_STAT_EXP - 1
+	add hl, bc 
+	predef CalcPkmnStats
 	call StatsScreen_CopyToTempMon
+	call StatsScreen_LoadGFX
+	call .drawStatExpCursor	
 	ret
+	
+.exitMaxed
+	pop hl
+	ret
+
+.exitNotEnoughCrystals
+	pop hl
+	pop af
+	pop hl
+	ret	
 	
 .statExpOffsets
 	db MON_HP_EXP
 	db MON_ATK_EXP
 	db MON_DEF_EXP
+	db MON_SPC_EXP
+	db MON_SPC_EXP
 	db MON_SPD_EXP
-	db MON_SPC_EXP
-	db MON_SPC_EXP
+
+.statTierCosts
+	dw 5
+	dw 5
+	dw 10
+	dw 10
+	dw 20
+	dw 20
+	dw 40
+	dw 40
+	dw 60
+	dw 60
+	dw 80
+	dw 80 
+	dw 100 
+	dw 100 
+	dw 150 
+	dw 150 
+	dw 200 
+	dw 200 
+	dw 400 
+	dw 400 
 	
 .d_up_statexp
 	ld a, [Buffer1]

@@ -1387,13 +1387,59 @@ CalcPkmnStats: ; e167
 	call CalcPkmnStatC
 	ld a, [hMultiplicand + 1]
 	ld [de], a
+	ld [hDividend], a
 	inc de
 	ld a, [hMultiplicand + 2]
+	ld [hDividend+1], a
 	ld [de], a
 	inc de
 	ld a, c
+	; apply stat scaling based on the 1-20 value stored in the low byte of the stat exp
+	push af
+	push hl
+	push bc
+	push de	
+	cp STAT_SDEF 
+	jr nz, .notSDEF
+	ld c, 5
+.notSDEF	
+	ld b, 2
+	ld a, 10 
+	ld [hDivisor], a
+	call Divide
+.findStatMod	
+	inc hl
+	inc hl
+	dec c 
+	ld a, c 
+	and a 
+	jr nz, .findStatMod	
+	
+	ld a, [hl]
+	ld [hMultiplier], a 
+	call Multiply
+	dec de 
+	ld a, [hProduct+3]
+	ld b, a
+	ld a, [de]
+	add b 
+	ld [de], a 
+	dec de
+	ld a, [hProduct+2]
+	ld b, a 
+	ld a, [de]
+	jr nc, .noCarry
+	add 1
+.noCarry		
+	add b	
+	ld [de], a 
+	pop de	
+	pop bc
+	pop hl	
+	pop af
 	cp STAT_SDEF
 	jr nz, .loop
+	
 	ret
 ; e17b
 
@@ -1427,18 +1473,6 @@ CalcPkmnStatC: ; e17b
 
 .not_spdef
 	sla c
-	ld a, d
-	and a
-	jr z, .no_stat_exp
-	add hl, bc
-	push de
-	ld a, [hld]
-	ld e, a
-	ld d, [hl]
-	farcall GetSquareRoot
-	pop de
-
-.no_stat_exp
 	srl c
 	pop hl
 	push bc

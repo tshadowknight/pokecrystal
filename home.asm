@@ -1401,5 +1401,29 @@ ReinitSpriteAnimFrame:: ; 3b3c
 	ret
 ; 3b4e
 
+SubtractCrystals::
+	ld hl, wCrystalCount
+	ld a, [hli]
+	ld d, a 
+	ld a, [hl]
+	sub c
+	ld e, a	
+	ld a, d 
+	jr nc, .noCarry
+	sub 1	
+	jr c, .notEnoughCrystals	
+.noCarry
+	sub b 
+	ld d, a
+	jr c, .notEnoughCrystals
+
+	ld hl, wCrystalCount
+	ld a, d 
+	ld [hli], a 
+	ld a, e 
+	ld [hl], a
+.notEnoughCrystals	
+	ret
+
 INCLUDE "home/audio.asm"
 INCLUDE "home/mobile.asm"

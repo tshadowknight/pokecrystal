@@ -142,7 +142,7 @@ PrintTempMonStatsAndStatExp: ; 50b7b
 	add hl, bc
 	push hl	
 	lb bc, 2, 3
-	ld de, TempMonHP
+	ld de, TempMonMaxHP
 	call .PrintStat
 	ld de, TempMonAttack
 	call .PrintStat
